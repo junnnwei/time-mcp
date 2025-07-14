@@ -1,26 +1,19 @@
 FROM python:3.13.5-alpine3.22
 
-# Install curl and dependencies
-RUN apt-get update && apt-get install -y curl gcc libffi-dev libssl-dev && rm -rf /var/lib/apt/lists/*
+# Install dependencies needed for uv
+RUN apk add --no-cache curl gcc musl-dev libffi-dev openssl-dev cargo
 
 # Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Add uv to PATH
-ENV PATH="/root/.cargo/bin:$PATH"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    cp /root/.local/bin/uv /usr/local/bin/uv && \
+    uv --version
 
 WORKDIR /app
 
-# Copy lockfiles
-COPY pyproject.toml uv.lock ./
-
-# Install dependencies using uv (locked, reproducible)
-RUN uv pip install --system --no-deps --require-hashes
-
-# Copy rest of the source code
+# Copy everything before running
 COPY . .
 
 EXPOSE 8000
 
-# Match Claude's expected format
+# Run like Claude Desktop expects — handles lockfile automatically
 CMD ["uv", "--directory", ".", "run", "time_mcp_server.py"]
